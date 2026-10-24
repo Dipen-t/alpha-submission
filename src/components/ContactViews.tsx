@@ -1,14 +1,16 @@
 import { ArrowUpRight, Building2, Check } from "lucide-react";
 import { stages } from "../data";
-import type { Contact } from "../data";
-import { Avatar, Labels, StageBadge } from "./ContactFields";
+import type { Contact, Stage } from "../data";
+import { Avatar, Labels, StageBadge, StageSelect } from "./ContactFields";
 const stageClass = (stage: string) => stage.toLowerCase();
 export function ContactTable({
   contacts,
   onOpen,
+  onStageChange,
 }: {
   contacts: Contact[];
   onOpen: (contact: Contact) => void;
+  onStageChange: (id: string, stage: Stage) => void;
 }) {
   return (
     <div className="table-scroll">
@@ -36,7 +38,11 @@ export function ContactTable({
               style={{ viewTransitionName: `contact-${contact.id}` }}
               onClick={(event) => {
                 const target = event.target as HTMLElement;
-                if (target.closest("button, a, input, select, textarea"))
+                if (
+                  target.closest(
+                    "button, a, input, select, textarea, .quick-stage",
+                  )
+                )
                   return;
                 const selection = window.getSelection();
                 if (
@@ -77,7 +83,12 @@ export function ContactTable({
                 {contact.email || <span className="missing">Not added</span>}
               </td>
               <td>
-                <StageBadge stage={contact.stage} />
+                <StageSelect
+                  id={contact.id}
+                  name={contact.name}
+                  stage={contact.stage}
+                  onChange={onStageChange}
+                />
               </td>
               <td>
                 {contact.owner ? (
@@ -109,10 +120,12 @@ export function ContactTable({
 export function ContactBoard({
   contacts,
   onOpen,
+  onStageChange,
   isSearching = false,
 }: {
   contacts: Contact[];
   onOpen: (contact: Contact) => void;
+  onStageChange: (id: string, stage: Stage) => void;
   isSearching?: boolean;
 }) {
   return (
@@ -131,14 +144,33 @@ export function ContactBoard({
             </div>
             <div className="cards">
               {group.map((contact) => (
-                <button
+                <article
                   className="contact-card"
                   style={{ viewTransitionName: `contact-${contact.id}` }}
                   key={contact.id}
-                  onClick={() => onOpen(contact)}
+                  onClick={(event) => {
+                    if (
+                      (event.target as HTMLElement).closest(
+                        "button, select, .quick-stage",
+                      )
+                    )
+                      return;
+                    const selection = window.getSelection();
+                    if (
+                      selection?.toString() &&
+                      event.currentTarget.contains(selection.anchorNode)
+                    )
+                      return;
+                    event.currentTarget
+                      .querySelector("button")
+                      ?.focus({ preventScroll: true });
+                    onOpen(contact);
+                  }}
                 >
-                  <div
+                  <button
                     className="card-person"
+                    type="button"
+                    onClick={() => onOpen(contact)}
                     style={{ viewTransitionName: `identity-${contact.id}` }}
                   >
                     <Avatar name={contact.name} />
@@ -147,10 +179,18 @@ export function ContactBoard({
                       <small>{contact.role || "Role not added"}</small>
                     </span>
                     <ArrowUpRight className="open-arrow" size={15} />
-                  </div>
-                  <div className="card-company">
-                    <Building2 size={14} />
-                    {contact.company || "Company not added"}
+                  </button>
+                  <div className="card-meta">
+                    <div className="card-company">
+                      <Building2 size={14} />
+                      {contact.company || "Company not added"}
+                    </div>
+                    <StageSelect
+                      id={contact.id}
+                      name={contact.name}
+                      stage={contact.stage}
+                      onChange={onStageChange}
+                    />
                   </div>
                   <div className="card-footer">
                     <Labels labels={contact.labels} />
@@ -165,7 +205,7 @@ export function ContactBoard({
                       )}
                     </span>
                   </div>
-                </button>
+                </article>
               ))}
               {!group.length && (
                 <div className="empty-group">

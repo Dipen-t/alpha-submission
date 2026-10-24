@@ -4,6 +4,41 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 
 describe("contact workspace", () => {
+  it("changes stage directly in both views without opening a drawer or losing notes", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Stage for Olivia Rhye" }),
+      "Customer",
+    );
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("combobox", { name: "Stage for Olivia Rhye" }),
+    ).toHaveValue("Customer");
+    await user.click(screen.getByRole("button", { name: "Board" }));
+    const customer = screen.getByRole("region", { name: "Customer contacts" });
+    await user.selectOptions(
+      within(customer).getByRole("combobox", { name: "Stage for Olivia Rhye" }),
+      "Lead",
+    );
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    const movedSelect = within(
+      screen.getByRole("region", { name: "Lead contacts" }),
+    ).getByRole("combobox", { name: "Stage for Olivia Rhye" });
+    await waitFor(() => expect(movedSelect).toHaveFocus());
+    expect(screen.getAllByRole("combobox")).toHaveLength(10);
+    await user.click(screen.getByRole("button", { name: /Olivia Rhye/ }));
+    expect(screen.getByLabelText("Stage")).toHaveValue("Lead");
+    expect(
+      (screen.getByLabelText(/Notes/) as HTMLTextAreaElement).value,
+    ).toContain("Interested in a more connected workflow");
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    await user.click(screen.getByRole("button", { name: "Table" }));
+    expect(
+      screen.getByRole("combobox", { name: "Stage for Olivia Rhye" }),
+    ).toHaveValue("Lead");
+    expect(screen.getAllByRole("row")).toHaveLength(11);
+  });
   afterEach(() => {
     Reflect.deleteProperty(document, "startViewTransition");
     vi.unstubAllGlobals();

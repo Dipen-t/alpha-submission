@@ -80,6 +80,20 @@ export default function App() {
     setNotice(`Changes saved for ${current?.name}.`);
     close();
   };
+  const changeStage = (id: string, stage: Stage) => {
+    const contact = contacts.find((person) => person.id === id);
+    if (!contact || contact.stage === stage) return;
+    setContacts((previous) =>
+      previous.map((person) =>
+        person.id === id ? { ...person, stage } : person,
+      ),
+    );
+    setNotice(`${contact.name} moved to ${stage}.`);
+    // A board move remounts the card in another group. Keep keyboard focus on it.
+    requestAnimationFrame(() =>
+      document.getElementById(`quick-stage-${id}`)?.focus(),
+    );
+  };
   return (
     <div className="app-shell">
       <div className="main-shell">
@@ -139,11 +153,16 @@ export default function App() {
           </div>
           <div className="contact-view">
             {view === "table" ? (
-              <ContactTable contacts={visibleContacts} onOpen={open} />
+              <ContactTable
+                contacts={visibleContacts}
+                onOpen={open}
+                onStageChange={changeStage}
+              />
             ) : (
               <ContactBoard
                 contacts={visibleContacts}
                 onOpen={open}
+                onStageChange={changeStage}
                 isSearching={Boolean(query.trim())}
               />
             )}
